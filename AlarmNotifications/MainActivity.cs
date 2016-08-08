@@ -15,12 +15,15 @@ namespace AlarmNotifications {
 			// Set our view from the "main" layout resource
 			SetContentView(Resource.Layout.Main);
 
-			// Get our button from the layout resource,
-			// and attach an event to it
 			Button button = FindViewById<Button>(Resource.Id.MyButton);
-			button.Text = "Show notification in 5s";
+			Button recurringButton = FindViewById<Button>(Resource.Id.buttonRecurring);
+
 			button.Click += delegate {
 				ScheduleNotification();
+			};
+
+			recurringButton.Click += delegate {
+				ScheduleRecurringNotification();
 			};
 		}
 
@@ -30,8 +33,23 @@ namespace AlarmNotifications {
 			PendingIntent pendingIntent = PendingIntent.GetBroadcast(this, 0, alarmIntent, PendingIntentFlags.UpdateCurrent);
 			AlarmManager alarmManager = (AlarmManager)GetSystemService(Context.AlarmService);
 
-			//schedule notification for 2s out
+			//schedule notification for 5s out
 			alarmManager.Set(AlarmType.ElapsedRealtime, SystemClock.ElapsedRealtime() + 5000, pendingIntent);
+		}
+
+		public void ScheduleRecurringNotification() {
+			Intent alarmIntent = new Intent(this, typeof(AlarmReceiver));
+
+			PendingIntent pendingIntent = PendingIntent.GetBroadcast(this, 0, alarmIntent, PendingIntentFlags.UpdateCurrent);
+			AlarmManager alarmManager = (AlarmManager)GetSystemService(Context.AlarmService);
+
+			Java.Util.Calendar calendar = Java.Util.Calendar.GetInstance(Java.Util.Locale.Us);
+			calendar.TimeInMillis = Java.Lang.JavaSystem.CurrentTimeMillis();
+			calendar.Set(Java.Util.CalendarField.HourOfDay, DateTime.Now.Hour);
+			calendar.Set(Java.Util.CalendarField.Minute, DateTime.Now.Minute);
+			
+			//schedule repeating notification for every 5 seconds
+			alarmManager.SetRepeating(AlarmType.RtcWakeup, 0, 5000, pendingIntent);
 		}
 	}
 
@@ -39,7 +57,7 @@ namespace AlarmNotifications {
 	public class AlarmReceiver : BroadcastReceiver {
 		public override void OnReceive(Context context, Intent intent) {
 			var notIntent = new Intent(context, typeof(MainActivity));
-			var contentIntent = PendingIntent.GetActivity(context, 0, notIntent, PendingIntentFlags.CancelCurrent);
+			var contentIntent = PendingIntent.GetActivity(context, 0, notIntent, PendingIntentFlags.UpdateCurrent);
 			var manager = NotificationManager.FromContext(context);
 
 			var builder = new Notification.Builder(context)
@@ -47,8 +65,7 @@ namespace AlarmNotifications {
 				.SetContentIntent(contentIntent)
 				.SetContentText("Sweet")
 				.SetContentTitle("Dude")
-				.SetAutoCancel(true)
-				.SetWhen(Java.Lang.JavaSystem.CurrentTimeMillis());
+				.SetAutoCancel(true);
 
 			var notification = builder.Build();
 			manager.Notify(0, notification);
